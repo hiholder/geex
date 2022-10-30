@@ -23,6 +23,7 @@ type IGroup interface {
 	Options(string, HandlerFunc)
 	Head(string, HandlerFunc)
 	Group(string) IGroup
+	Use(...HandlerFunc)
 }
 
 type Router struct {
