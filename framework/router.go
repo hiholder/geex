@@ -15,13 +15,13 @@ var (
 )
 
 type IGroup interface {
-	Get(string, HandlerFunc)
-	Post(string, HandlerFunc)
-	Delete(string, HandlerFunc)
-	Patch(string, HandlerFunc)
-	Put(string, HandlerFunc)
-	Options(string, HandlerFunc)
-	Head(string, HandlerFunc)
+	Get(string, HandlerFunc) IGroup
+	Post(string, HandlerFunc) IGroup
+	Delete(string, HandlerFunc) IGroup
+	Patch(string, HandlerFunc) IGroup
+	Put(string, HandlerFunc) IGroup
+	Options(string, HandlerFunc) IGroup
+	Head(string, HandlerFunc) IGroup
 	Group(string) IGroup
 	Use(...HandlerFunc)
 }

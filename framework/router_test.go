@@ -4,13 +4,14 @@ import (
 	c "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
-var r = newRouter()
+
 func init()  {
-	r.addRouter("GET", "/", nil)
-	r.addRouter("GET", "/hello/:name", nil)
-	r.addRouter("GET", "/hello/b/c", nil)
-	r.addRouter("GET", "/hi/:name", nil)
-	r.addRouter("GET", "/assets/*filepath", nil)
+	e = New()
+	e.addRouter("GET", "/", nil)
+	e.addRouter("GET", "/hello/:name", nil)
+	e.addRouter("GET", "/hello/b/c", nil)
+	e.addRouter("GET", "/hi/:name", nil)
+	e.addRouter("GET", "/assets/*filepath", nil)
 }
 
 func TestParsePattern(t *testing.T) {
@@ -23,9 +24,8 @@ func TestParsePattern(t *testing.T) {
 
 func TestGetRoute(t *testing.T) {
 	c.Convey("Test Get Route", t, func() {
-		node, ps := r.getRouter("GET", "/hello/geektutu")
-		c.So(node, c.ShouldNotBeNil)
-		c.So(node.pattern, c.ShouldEqual, "/hello/:name")
+		handler, ps := e.methodTree["GET"].SearchRouter("/hello/geektutu")
+		c.So(handler, c.ShouldNotBeNil)
 		c.So(ps["name"], c.ShouldEqual, "geektutu")
 	})
 }
