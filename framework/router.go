@@ -15,14 +15,15 @@ var (
 )
 
 type IGroup interface {
-	Get(string, HandlerFunc)
-	Post(string, HandlerFunc)
-	Delete(string, HandlerFunc)
-	Patch(string, HandlerFunc)
-	Put(string, HandlerFunc)
-	Options(string, HandlerFunc)
-	Head(string, HandlerFunc)
+	Get(string, HandlerFunc) IGroup
+	Post(string, HandlerFunc) IGroup
+	Delete(string, HandlerFunc) IGroup
+	Patch(string, HandlerFunc) IGroup
+	Put(string, HandlerFunc) IGroup
+	Options(string, HandlerFunc) IGroup
+	Head(string, HandlerFunc) IGroup
 	Group(string) IGroup
+	Use(...HandlerFunc)
 }
 
 type Router struct {
@@ -32,9 +33,9 @@ type Router struct {
 
 // RouterGroup 路由组
 type RouterGroup struct {
-	prefix	string
-	middleware	[]HandlerFunc // 中间件
-	engine  *Engine            // 全局唯一的Engine
+	prefix     string
+	middleware []HandlerFunc // 中间件
+	engine     *Engine       // 全局唯一的Engine
 }
 
 func newRouter() *Router {

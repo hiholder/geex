@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/hiholder/geex/example"
 	"github.com/hiholder/geex/framework"
 	"html/template"
 	"log"
@@ -25,7 +26,7 @@ func FormatAsDate(t time.Time) string {
 func main() {
 	e := framework.Default()
 	e.SetFuncMap(template.FuncMap{
-		"FormatAsDate" : FormatAsDate,
+		"FormatAsDate": FormatAsDate,
 	})
 	e.LoadHTMLGlob("templates/*")
 	e.Static("/assets", "./static")
@@ -37,7 +38,7 @@ func main() {
 	})
 	e.Get("/assets/*filepath", func(c *framework.Context) {
 		c.JSON(http.StatusOK, framework.H{
-			"filepath" : c.Param("filepath"),
+			"filepath": c.Param("filepath"),
 		})
 	})
 	e.Post("/login", func(c *framework.Context) {
@@ -60,8 +61,8 @@ func main() {
 		})
 		v2.Post("/login", func(c *framework.Context) {
 			c.JSON(http.StatusOK, framework.H{
-				"username" : c.PostForm("username"),
-				"password" : c.PostForm("password"),
+				"username": c.PostForm("username"),
+				"password": c.PostForm("password"),
 			})
 		})
 	}
@@ -78,5 +79,7 @@ func main() {
 		names := []string{"geek"}
 		c.String(http.StatusOK, names[100])
 	})
+	// websocket
+	e.Get("/echo", example.EchoMessage)
 	e.Run(":9999")
 }

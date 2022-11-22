@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestAddRouter(t *testing.T)  {
+func TestAddRouter(t *testing.T) {
 	c.Convey("test add router", t, func() {
 		url := "/v1/student/add"
 		tree := NewTree()
@@ -51,7 +51,7 @@ func TestDynamicRouter(t *testing.T) {
 	})
 }
 
-func TestNullRouter(t *testing.T)  {
+func TestNullRouter(t *testing.T) {
 	c.Convey("test null router", t, func() {
 		url := "/"
 		tree := NewTree()
@@ -77,7 +77,7 @@ func nodeString(node *node) string {
 	}
 	for _, child := range node.children {
 		if child != nil {
-			path +=  nodeString(child)
+			path += nodeString(child)
 			break
 		}
 	}

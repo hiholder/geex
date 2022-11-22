@@ -34,7 +34,7 @@ func TestSimpleGee(t *testing.T) {
 	})
 	e.Get("/assets/*filepath", func(c *Context) {
 		c.JSON(http.StatusOK, H{
-			"filepath" : c.Param("filepath"),
+			"filepath": c.Param("filepath"),
 		})
 	})
 	e.Post("/login", func(c *Context) {
@@ -60,8 +60,8 @@ func TestSimpleGee(t *testing.T) {
 		})
 		v2.Post("/login", func(c *Context) {
 			c.JSON(http.StatusOK, H{
-				"username" : c.PostForm("username"),
-				"password" : c.PostForm("password"),
+				"username": c.PostForm("username"),
+				"password": c.PostForm("password"),
 			})
 		})
 	}

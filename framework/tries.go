@@ -10,18 +10,18 @@ type Tree struct {
 }
 
 type node struct {
-	pattern  string  // 待匹配路由
-	part     string  // 路由中的一部分
-	children []*node // 子节点
-	isWild   bool    // 是否精准匹配
-	isLast   bool    // 是否是最后一个
+	pattern  string      // 待匹配路由
+	part     string      // 路由中的一部分
+	children []*node     // 子节点
+	isWild   bool        // 是否精准匹配
+	isLast   bool        // 是否是最后一个
 	handler  HandlerFunc // 将handler放到节点上
 }
 
 func newNode() *node {
 	return &node{
-		isLast:  false,
-		part: "",
+		isLast:   false,
+		part:     "",
 		children: make([]*node, 0),
 	}
 }
@@ -110,15 +110,15 @@ func (tree *Tree) AddRouter(path string, handler HandlerFunc) error {
 		// 如果没有找到
 		if next == nil {
 			next = &node{
-				part: part,
+				part:     part,
 				children: make([]*node, 0),
 			}
 			if len(part) > 0 {
 				next.isWild = part[0] == ':' || part[0] == '*'
 			}
 			n.children = append(n.children, next)
-			if i == len(parts) - 1 || (len(part) > 0 && part[0] == '*')  {
-				if i != len(parts) - 1 {
+			if i == len(parts)-1 || (len(part) > 0 && part[0] == '*') {
+				if i != len(parts)-1 {
 					return fmt.Errorf("invalid * position, path=%v", path)
 				}
 				next.isLast = true
@@ -159,7 +159,7 @@ func (n *node) matchNode(path string) (*node, error) {
 	return nil, nil
 }
 
-func (tree *Tree) SearchRouter(path string) (HandlerFunc, map[string]string)  {
+func (tree *Tree) SearchRouter(path string) (HandlerFunc, map[string]string) {
 	if path[0] != '/' {
 		return nil, nil //, fmt.Errorf("invalid path=%v", path)
 	}
@@ -187,4 +187,3 @@ func (tree *Tree) SearchRouter(path string) (HandlerFunc, map[string]string)  {
 	}
 	return node.handler, params
 }
-
