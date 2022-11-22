@@ -13,7 +13,6 @@ import (
 )
 
 type AcceptOptions struct {
-
 }
 
 func Accept(w http.ResponseWriter, r *http.Request, opts *AcceptOptions) (*Conn, error) {
@@ -48,10 +47,10 @@ func accept(w http.ResponseWriter, r *http.Request, opts *AcceptOptions) (_ *Con
 	brw.Reader.Reset(io.MultiReader(bytes.NewReader(b), netConn))
 	return newConn(connConfig{
 		subProtocol: w.Header().Get("Sec-WebSocket-Protocol"),
-		rwc: netConn,
-		client: false,
-		br: brw.Reader,
-		bw: brw.Writer,
+		rwc:         netConn,
+		client:      false,
+		br:          brw.Reader,
+		bw:          brw.Writer,
 	}), nil
 }
 
@@ -88,7 +87,7 @@ func verifyClientRequest(w http.ResponseWriter, r *http.Request) (errCode int, _
 	return 0, nil
 }
 
-func upgradeResponse(w http.ResponseWriter, r *http.Request)  {
+func upgradeResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Upgrade", "websocket")
 	w.Header().Set("Connection", "Upgrade")
 
@@ -119,6 +118,7 @@ func headerTokens(h http.Header, key string) []string {
 }
 
 var keyGUID = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+
 func secWebSocketAccept(secWebSocketKey string) string {
 	h := sha1.New()
 	h.Write([]byte(secWebSocketKey))

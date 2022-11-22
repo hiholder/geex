@@ -40,7 +40,7 @@ func TestAccept(t *testing.T) {
 	t.Run("badHijack", func(t *testing.T) {
 		convey.Convey("badHijack", t, func() {
 			w := mockHijacker{
-				ResponseWriter : httptest.NewRecorder(),
+				ResponseWriter: httptest.NewRecorder(),
 				hijack: func() (net.Conn, *bufio.ReadWriter, error) {
 					return nil, nil, errors.New("test")
 				},

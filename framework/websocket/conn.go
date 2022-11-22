@@ -19,22 +19,29 @@ type Conn struct {
 	readMu            *mu
 	readCloseFrameErr error
 	msgReader         *msgReader
+	readHeaderBuf     []byte
+	readControlBuf    [maxControlPayload]byte
 	// write
+
 	writeFrameMu *mu
 	writeHeader  header
+	writeBuf     []byte
+	writeHeaderBuf [8]byte
 
 	closed     chan struct{}
 	closeMu    sync.Mutex
 	closeErr   error
 	wroteClose bool
+
+	activePings   map[string]chan<- struct{}
 }
 
 type connConfig struct {
-	subProtocol    string
-	rwc    io.ReadWriteCloser
-	br     *bufio.Reader
-	bw     *bufio.Writer
-	client bool // 是否是客户端
+	subProtocol string
+	rwc         io.ReadWriteCloser
+	br          *bufio.Reader
+	bw          *bufio.Writer
+	client      bool // 是否是客户端
 }
 
 type mu struct {
@@ -44,8 +51,34 @@ type mu struct {
 
 func newMu(c *Conn) *mu {
 	return &mu{
-		c:    c,
-		ch : make(chan struct{}, 1),
+		c:  c,
+		ch: make(chan struct{}, 1),
+	}
+}
+
+func (m *mu) lock(ctx context.Context) error {
+	select {
+	case <-m.c.closed:
+		return m.c.closeErr
+	case <-ctx.Done():
+		err := fmt.Errorf("failed to acquire lock: %w", ctx.Err())
+		m.c.close(err)
+		return err
+	case m.ch <- struct{}{}:
+		select {
+		case <-m.c.closed:
+			m.unlock()
+			return m.c.closeErr
+		default:
+		}
+		return nil
+	}
+}
+
+func (m *mu) unlock() {
+	select {
+	case <-m.ch:
+	default:
 	}
 }
 
@@ -69,15 +102,15 @@ func newConn(cfg connConfig) *Conn {
 	return c
 }
 
-func (c *Conn) timeoutLoop()  {
+func (c *Conn) timeoutLoop() {
 	readCtx := context.Background()
 	writeCtx := context.Background()
 	for {
 		select {
-		case <- c.closed: // 连接关闭
+		case <-c.closed: // 连接关闭
 			return
-		case writeCtx = <- c.writeTimeout:
-		case readCtx = <- c.readTimeout:
+		case writeCtx = <-c.writeTimeout:
+		case readCtx = <-c.readTimeout:
 		case <-readCtx.Done():
 			c.close(fmt.Errorf("read timed out: %w", readCtx.Err()))
 		case <-writeCtx.Done():
@@ -87,7 +120,7 @@ func (c *Conn) timeoutLoop()  {
 	}
 }
 
-func (c *Conn) close(err error)  {
+func (c *Conn) close(err error) {
 	c.closeMu.Lock()
 	defer c.closeMu.Unlock()
 	if c.isClosed() {
@@ -100,17 +133,4 @@ func (c *Conn) close(err error)  {
 	// TODO：还需要关闭msgReader和msgWriter
 }
 
-func (c *Conn) setCloseErrLocked(err error)  {
-	if c.closeErr == nil {
-		c.closeErr = fmt.Errorf("WebSocket closed: %w", err)
-	}
-}
 
-func (c *Conn) isClosed() bool {
-	select {
-	case <-c.closed:
-		return true
-	default:
-		return false
-	}
-}

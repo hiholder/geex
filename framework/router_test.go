@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func init()  {
+func init() {
 	e = New()
 	e.addRouter("GET", "/", nil)
 	e.addRouter("GET", "/hello/:name", nil)

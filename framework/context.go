@@ -29,21 +29,22 @@ type Context struct {
 	// engine指针
 	engine *Engine
 	// 写保护机制
-	writerMux  *sync.Mutex
+	writerMux *sync.Mutex
 	// 超时标记位
 	hasTimeout bool
 }
 
 func newContext(w http.ResponseWriter, r *http.Request) *Context {
 	return &Context{
-		Writer: w,
-		Req:    r,
-		Path:   r.URL.Path,
-		Method: r.Method,
-		index:  -1,
+		Writer:    w,
+		Req:       r,
+		Path:      r.URL.Path,
+		Method:    r.Method,
+		index:     -1,
 		writerMux: &sync.Mutex{},
 	}
 }
+
 // 获取表单数据
 
 func (c *Context) FormAll() map[string][]string {
@@ -156,6 +157,7 @@ func (c *Context) QueryString(key string, def string) (string, bool) {
 	}
 	return def, false
 }
+
 // header
 func (c *Context) Headers() map[string][]string {
 	return c.Req.Header
@@ -179,7 +181,7 @@ func (c *Context) Cookies() map[string]string {
 	return res
 }
 
-func (c *Context)Cookie(key string) (string, bool) {
+func (c *Context) Cookie(key string) (string, bool) {
 	cookies := c.Cookies()
 	if v, ok := cookies[key]; ok {
 		return v, true
@@ -196,9 +198,10 @@ func (c *Context) SetHeader(key string, value string) {
 	c.Writer.Header().Set(key, value)
 }
 
-func (c *Context) SetHasTimeout()  {
+func (c *Context) SetHasTimeout() {
 	c.hasTimeout = true
 }
+
 // 构造相应
 // 构造String响应
 func (c *Context) String(code int, format string, values ...interface{}) {
@@ -241,7 +244,7 @@ func (c *Context) HTML(code int, name string, data interface{}) {
 	c.Status(code)
 }
 
-func (c *Context) Xml(code int, obj interface{})  {
+func (c *Context) Xml(code int, obj interface{}) {
 	marshal, err := xml.Marshal(obj)
 	if err != nil {
 		c.Fail(http.StatusInternalServerError, err.Error())
@@ -273,14 +276,14 @@ func (c *Context) Next() {
 }
 
 // Fail 请求失败
-func (c *Context) Fail(code int, err string)  {
+func (c *Context) Fail(code int, err string) {
 	c.index = len(c.handlers)
 	c.JSON(code, H{
-		"message" : err,
+		"message": err,
 	})
 }
 
-func (c *Context) Done() <-chan struct{}{
+func (c *Context) Done() <-chan struct{} {
 	if c.Req == nil || c.Req.Context() == nil {
 		return nil
 	}

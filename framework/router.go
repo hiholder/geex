@@ -33,9 +33,9 @@ type Router struct {
 
 // RouterGroup 路由组
 type RouterGroup struct {
-	prefix	string
-	middleware	[]HandlerFunc // 中间件
-	engine  *Engine            // 全局唯一的Engine
+	prefix     string
+	middleware []HandlerFunc // 中间件
+	engine     *Engine       // 全局唯一的Engine
 }
 
 func newRouter() *Router {

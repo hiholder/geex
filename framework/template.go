@@ -6,7 +6,7 @@ import (
 )
 
 // Static 解析请求地址，映射到服务器文件上的真实地址
-func (r *RouterGroup) Static(relativePath, root string)  {
+func (r *RouterGroup) Static(relativePath, root string) {
 	handler := r.createStatic(relativePath, http.Dir(root))
 	urlPattern := path.Join(relativePath, "/*filepath")
 	r.Get(urlPattern, handler)
