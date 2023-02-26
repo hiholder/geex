@@ -50,6 +50,22 @@ type CloseError struct {
 	Reason string // 连接关闭原因
 }
 
+func (c *Conn) Close(code StatusCode, reason string) error {
+	return c.closeHandshake(code, reason)
+}
+
+func (c *Conn) closeHandshake(code StatusCode, reason string) (err error) {
+	writeErr := c.writeClose(code, reason)
+	closeHandshakeErr := c.waitCloseHandshake()
+	if writeErr != nil {
+		return writeErr
+	}
+	if CloseStatus(closeHandshakeErr) != -1 {
+		return closeHandshakeErr
+	}
+	return nil
+}
+
 func (c *Conn) isClosed() bool {
 	select {
 	case <-c.closed:
@@ -70,6 +86,7 @@ func (c *Conn) setCloseErr(err error)  {
 	c.setCloseErrLocked(err)
 	c.closeMu.Unlock()
 }
+
 var errAlreadyWroteClose = gerrors.New("already wrote close")
 
 // 将关闭信息写入返回结构中
@@ -101,6 +118,11 @@ func (c *Conn) writeClose(code StatusCode, reason string) error {
 	if marshalErr != nil {
 		return marshalErr
 	}
+	return nil
+}
+
+func (c *Conn) waitCloseHandshake() error {
+	// todo: 待实现
 	return nil
 }
 

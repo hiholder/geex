@@ -22,7 +22,7 @@ type Conn struct {
 	readHeaderBuf     []byte
 	readControlBuf    [maxControlPayload]byte
 	// write
-
+	msgWriterStats    *msgWriterState
 	writeFrameMu *mu
 	writeHeader  header
 	writeBuf     []byte
@@ -98,6 +98,7 @@ func newConn(cfg connConfig) *Conn {
 	c.writeFrameMu = newMu(c)
 
 	c.msgReader = newMsgReader(c)
+	c.msgWriterStats = newMsgWriterState(c)
 	go c.timeoutLoop()
 	return c
 }

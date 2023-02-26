@@ -32,9 +32,12 @@ type Context struct {
 	writerMux *sync.Mutex
 	// 超时标记位
 	hasTimeout bool
+	// 服务容器
+	container  Container
 }
 
 func newContext(w http.ResponseWriter, r *http.Request) *Context {
+
 	return &Context{
 		Writer:    w,
 		Req:       r,
@@ -296,3 +299,18 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 	}
 	return c.Req.Context().Deadline()
 }
+
+// context实现container的封装
+func (c *Context) Make(key string) (interface{}, error) {
+	return c.container.Make(key)
+}
+
+func (c *Context)MustMake(key string) interface{}  {
+	return c.container.MustMake(key)
+}
+
+func (c *Context)MakeNew(key string, params []interface{}) (interface{}, error)  {
+	return c.container.MakeNew(key, params)
+}
+
+

@@ -21,20 +21,6 @@ const (
 	MessageBinary
 )
 
-type msgReader struct {
-	c *Conn
-
-	ctx           context.Context
-	fin           bool
-	payloadLength int64
-	maskKey       uint32
-
-	// 读取数据
-	r io.Reader
-	n int64
-
-	readerFunc readerFunc
-}
 
 func newMsgReader(c *Conn) *msgReader {
 	mr := &msgReader{
@@ -56,13 +42,25 @@ func (c *Conn) reader(ctx context.Context) (_ MessageType, _ io.Reader, err erro
 	if err = c.readMu.lock(ctx); err != nil {
 		return 0, nil, err
 	}
-	defer c.readMu.unlock()
 	if !c.msgReader.fin {
 		err = errors.New("previous message not read to completion")
 		c.close(fmt.Errorf("fail to get reader: %w", err))
 		return 0, nil, err
 	}
-	return 0, nil, err
+	defer c.readMu.unlock()
+	// 读取协议头
+	h, err := c.readLoop(ctx)
+	if err != nil {
+		return 0, nil, err
+	}
+	// 状态码-0
+	if h.opcode == opContinuation {
+		err := gerrors.New("received continuation frame without text or binary frame")
+		c.writeError(StatusProtocolError, err)
+		return 0, nil, err
+	}
+	c.msgReader.reset(ctx, h)
+	return MessageType(h.opcode), c.msgReader, err
 }
 
 func (c *Conn) readLoop(ctx context.Context) (header, error) {
@@ -195,6 +193,33 @@ func (c *Conn) readControl(ctx context.Context, h header) (err error) {
 	return err
 }
 
+type msgReader struct {
+	c *Conn
+
+	ctx           context.Context
+	fin           bool
+	payloadLength int64
+	maskKey       uint32
+
+	// 读取数据
+	r io.Reader
+	n int64
+
+	readerFunc readerFunc
+}
+
+func (mr *msgReader) reset(ctx context.Context, h header)  {
+	mr.ctx = ctx
+	mr.r = mr.readerFunc
+	mr.setFrame(h)
+}
+
+func (mr *msgReader) setFrame(h header)  {
+	mr.fin = h.fin
+	mr.payloadLength = h.payloadLength
+	mr.maskKey = h.maskKey
+}
+
 func (mr *msgReader) Read(p []byte) (int, error) {
 	if err := mr.c.readMu.lock(mr.ctx); err != nil {
 		return 0, gerrors.Errorf("failed to read: %v", err)
@@ -219,8 +244,19 @@ func (mr *msgReader) Read(p []byte) (int, error) {
 
 func (mr *msgReader) read(p []byte) (int, error) {
 	for {
-		// todo: 判断是否可读，opContinuation处理
-
+		if mr.payloadLength == 0 {
+			h, err := mr.c.readLoop(mr.ctx)
+			if err != nil {
+				return 0, err
+			}
+			if h.opcode != opContinuation {
+				err := gerrors.New("received new data message without finishing the previous message")
+				mr.c.writeError(StatusProtocolError, err)
+				return 0, err
+			}
+			mr.setFrame(h)
+			continue
+		}
 		if int64(len(p)) > mr.payloadLength {
 			p = p[:mr.payloadLength]
 		}
@@ -229,6 +265,9 @@ func (mr *msgReader) read(p []byte) (int, error) {
 			return n, err
 		}
 		mr.payloadLength -= int64(n)
+		if !mr.c.client {
+			mr.maskKey = mask(mr.maskKey, p)
+		}
 		return n, nil
 	}
 }

@@ -9,6 +9,114 @@ import (
 	"time"
 )
 
+func (c *Conn) Writer(ctx context.Context, typ MessageType) (io.WriteCloser, error) {
+	return c.writer(ctx, typ)
+}
+
+func (c *Conn) writer(ctx context.Context, typ MessageType) (io.WriteCloser, error) {
+	err := c.msgWriterStats.reset(ctx, typ)
+	if err != nil {
+		return nil, err
+	}
+	return &msgWriter{
+		mw: c.msgWriterStats,
+		closed: false,
+	}, nil
+}
+
+func (c *Conn) write(ctx context.Context, typ MessageType, p []byte) (int, error) {
+	_, err := c.writer(ctx, typ)
+	if err != nil {
+		return 0, err
+	}
+	defer c.msgWriterStats.mu.unlock()
+	return c.writeFrame(ctx, true, c.msgWriterStats.opcode, p)
+}
+
+type msgWriter struct {
+	mw *msgWriterState
+	closed bool
+}
+
+func (m *msgWriter) Write(p []byte) (n int, err error) {
+	if m.closed {
+		return 0, gerrors.New("cannot use closed writer")
+	}
+	return m.mw.Write(p)
+}
+
+func (m *msgWriter) Close() error {
+	if m.closed {
+		return gerrors.New("cannot use closed writer")
+	}
+	m.closed = true
+	return m.mw.Close()
+}
+
+type msgWriterState struct {
+	c    *Conn
+	mu   *mu
+	writeMu  *mu
+	ctx  context.Context
+	opcode opcode
+	w    io.Writer
+}
+
+func newMsgWriterState(c *Conn) *msgWriterState {
+	return &msgWriterState{
+		c: c,
+		mu: newMu(c),
+		writeMu: newMu(c),
+	}
+}
+
+func (mw *msgWriterState) Write(p []byte) (_ int, err error) {
+	if err = mw.writeMu.lock(mw.ctx); err != nil {
+		return 0, gerrors.Errorf("failed to write: %v", err)
+	}
+	defer mw.writeMu.unlock()
+	defer func() {
+		if err != nil {
+			err = gerrors.Errorf("failed to write: %v", err)
+			mw.c.close(err)
+		}
+	}()
+	return mw.write(p)
+}
+
+func (mw *msgWriterState)write(p []byte) (int, error) {
+	n, err := mw.c.writeFrame(mw.ctx, false, mw.opcode, p)
+	if err != nil {
+		return 0, gerrors.Errorf("failed to write data frame: %v", err)
+	}
+	mw.opcode = opContinuation
+	return n, nil
+}
+
+func (mw *msgWriterState) Close() (err error) {
+	if err = mw.writeMu.lock(mw.ctx); err != nil {
+		return err
+	}
+	defer mw.writeMu.unlock()
+	_, err = mw.c.writeFrame(mw.ctx, true, mw.opcode, nil)
+	if err != nil {
+		return gerrors.Errorf("failed to write fin frame: %v", err)
+	}
+	mw.mu.unlock()
+	return nil
+}
+
+func (mw *msgWriterState) reset(ctx context.Context, typ MessageType) error {
+	err := mw.mu.lock(ctx)
+	if err != nil {
+		return err
+	}
+	mw.ctx = ctx
+	mw.opcode = opcode(typ)
+	return nil
+}
+
+
 func (c *Conn) writeControl(ctx context.Context, opcode opcode, p []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()

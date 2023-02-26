@@ -16,6 +16,7 @@ type Engine struct {
 	// 模板渲染
 	htmlTemplates *template.Template // 模板
 	funcMap       template.FuncMap   // 自定义模板渲染函数
+	container     Container
 }
 
 func New() *Engine {
@@ -23,6 +24,7 @@ func New() *Engine {
 	engine.RouterGroup = newGroup(engine, "")
 	engine.methodTree = make(map[string]*Tree, 0)
 	engine.groups = []*RouterGroup{engine.RouterGroup}
+	engine.container = NewGeeXContainer()
 	return engine
 }
 
@@ -72,6 +74,12 @@ func (e *Engine) Run(addr string) error {
 	return http.ListenAndServe(addr, e)
 }
 
+func (e *Engine) newContext(w http.ResponseWriter, r *http.Request) *Context {
+	c := newContext(w, r)
+	c.container = e.container
+	return c
+}
+
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var middlewares []HandlerFunc
 	for _, group := range e.groups {
@@ -81,10 +89,19 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Println(r.URL)
-	c := newContext(w, r)
+	c := e.newContext(w, r)
 	c.handlers = middlewares
 	c.engine = e
 	e.handleServeHTTP(c)
+}
+
+// Bind 绑定服务容器
+func (e *Engine) Bind(provider ServiceProvider) error {
+	return e.container.Bind(provider)
+}
+
+func (e *Engine) IsBind(key string) bool {
+	return e.container.IsBind(key)
 }
 
 func (e *Engine) handleServeHTTP(ctx *Context) {

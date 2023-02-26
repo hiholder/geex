@@ -25,6 +25,20 @@ func read(ctx context.Context, c *Conn, v interface{}) (err error) {
 	if err = jsoniter.Unmarshal(bf.Bytes(), v); err != nil {
 		return gerrors.Wrap(err, "unmarshal fail")
 	}
-
 	return nil
+}
+
+func Write(ctx context.Context, c *Conn, v interface{}) error {
+	return write(ctx, c, v)
+}
+
+func write(ctx context.Context, c *Conn, v interface{}) error {
+	w, err := c.Writer(ctx, MessageText)
+	if err != nil {
+		return err
+	}
+	if err := jsoniter.NewEncoder(w).Encode(v); err != nil {
+		return gerrors.Wrap(err, "marshal fail")
+	}
+	return w.Close()
 }
