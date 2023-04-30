@@ -1,0 +1,5 @@
+driver: rotate
+level: trace
+rotate_count: 10
+max_age: "10d"
+date_format: "%Y-%m-%d-%H-%M"
