@@ -16,7 +16,6 @@ func TestGeexEnv_AppEnv(t *testing.T) {
 		geexEnv := env.(GeexEnv)
 		c.So(geexEnv.maps["APP_ENV"], c.ShouldEqual, "development")
 	})
-
 }
 
 func TestGeeXEnvProvider(t *testing.T) {

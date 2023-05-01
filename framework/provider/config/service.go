@@ -8,9 +8,11 @@ import (
 	"github.com/hiholder/geex/framework/contract"
 	"github.com/mitchellh/mapstructure"
 	gerrors "github.com/pkg/errors"
+	crypt "github.com/sagikazarmark/crypt/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -27,6 +29,16 @@ type GeexConfig struct {
 	envMap   map[string]string	// 所有环境变量
 	confMap  map[string]interface{}	// 配置文件结构
 	confRaw  map[string][]byte	// 配置文件原始信息
+	remoteProviders []*defaultRemoteProvider
+	remoteConfigProvider *remoteConfigProvider
+}
+
+type remoteConfigProvider struct {}
+
+type defaultRemoteProvider struct {
+	provider	string
+	endpoint    string
+	path        string
 }
 
 // NewGeexConfig 初始化Config的方法
@@ -48,6 +60,7 @@ func NewGeexConfig(params ...interface{}) (interface{}, error) {
 		confMap: make(map[string]interface{}),
 		confRaw: make(map[string][]byte),
 		lock: sync.RWMutex{},
+		remoteConfigProvider: &remoteConfigProvider{},
 	}
 	// 读取每个文件
 	dir, err := ioutil.ReadDir(envFolder)
@@ -211,6 +224,69 @@ func (conf *GeexConfig) Load(key string, val interface{}) error {
 		return gerrors.WithStack(err)
 	}
 	return decoder.Decode(conf.find(key))
+}
+func (conf *GeexConfig) AddRemoteProvider(provider, endpoint, path string) error {
+	return conf.addRemoteProvider(provider, endpoint, path)
+}
+
+func (conf *GeexConfig) addRemoteProvider(provider, endpoint, path string) error {
+	if provider != "" && endpoint != "" {
+		drp := &defaultRemoteProvider{
+			provider: provider,
+			endpoint: endpoint,
+			path:     path,
+		}
+		conf.remoteProviders = append(conf.remoteProviders, drp)
+	}
+	return nil
+}
+func (conf *GeexConfig) GetRemoteConfig() error {
+	for _, drp := range conf.remoteProviders {
+		reader, err := conf.remoteConfigProvider.Get(drp)
+		if err != nil {
+			continue
+		}
+		bts, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return gerrors.WithStack(err)
+		}
+		if err = yaml.Unmarshal(bts, &conf.confMap); err != nil {
+			return gerrors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+func (rp *remoteConfigProvider) Get(drp *defaultRemoteProvider) (io.Reader, error)  {
+	cm, err := getConfigManger(drp)
+	if err != nil {
+		return nil, err
+	}
+	b, err := cm.Get(drp.path)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(b), nil
+}
+
+func getConfigManger(rp *defaultRemoteProvider) (crypt.ConfigManager, error) {
+	var cm crypt.ConfigManager
+	var err error
+	endpoints := strings.Split(rp.endpoint, ";")
+	switch rp.provider {
+	case "etcd":
+		cm, err = crypt.NewStandardEtcdConfigManager(endpoints)
+	case "etcd3":
+		cm, err = crypt.NewStandardEtcdV3ConfigManager(endpoints)
+	case "firestore":
+		cm, err = crypt.NewStandardFirestoreConfigManager(endpoints)
+	default:
+		cm, err = crypt.NewStandardConsulConfigManager(endpoints)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return cm, nil
 }
 
 func (conf *GeexConfig) find(key string) interface{} {

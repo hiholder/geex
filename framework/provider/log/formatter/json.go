@@ -2,9 +2,9 @@ package formatter
 
 import (
 	"github.com/hiholder/geex/framework/contract"
-	"strings"
 	"github.com/json-iterator/go"
 	gerrors "github.com/pkg/errors"
+	"strings"
 	"time"
 )
 

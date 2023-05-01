@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ func FormatAsDate(t time.Time) string {
 	return fmt.Sprintf("%d-%02d-%02d", year, month, day)
 }
 
-func main() {
+func Run()  {
 	e := framework.Default()
 	e.SetFuncMap(template.FuncMap{
 		"FormatAsDate": FormatAsDate,

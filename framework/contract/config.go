@@ -22,6 +22,8 @@ type Config interface {
 	GetStringMap(key string) map[string]interface{}
 	GetStringMapString(key string) map[string]string
 	GetStringMapStringSlice(key string) map[string][]string
+	AddRemoteProvider(provider, endpoint, path string) error
+	GetRemoteConfig() error
 	// Load 加载到某个对象
 	Load(key string, val interface{}) error
 }
